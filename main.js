@@ -1,102 +1,3 @@
-// document.addEventListener("DOMContentLoaded", function () {
-//     const canvas = document.getElementById('canvas');
-//     const ctx = canvas.getContext('2d');
-
-//     // Define points to create the letter 'F'
-//     const points = [
-//         { x: 300, y: 100 }, // Start top left
-//         { x: 300, y: 200 }, // Down straight
-//         { x: 300, y: 300 }, // Down straight
-//         { x: 400, y: 300 }, // Right straight (middle bar)
-//         { x: 300, y: 300 }, // Back to left
-//         { x: 300, y: 500 }, // Down to bottom
-//         { x: 300, y: 100 }, // Back to top (not drawn)
-//         { x: 450, y: 100 }  // Top right bar
-//     ];
-
-//     let slider = { x: points[0].x, y: points[0].y, radius: 10 };
-//     let isDragging = false;
-
-//     function drawPath() {
-//         ctx.clearRect(0, 0, canvas.width, canvas.height);
-//         ctx.beginPath();
-//         ctx.moveTo(points[0].x, points[0].y);
-//         points.forEach((point, index) => {
-//             if (index > 0) {
-//                 ctx.lineTo(point.x, point.y);
-//             }
-//         });
-//         ctx.strokeStyle = 'blue';
-//         ctx.stroke();
-//     }
-
-//     function drawSlider() {
-//         ctx.beginPath();
-//         ctx.arc(slider.x, slider.y, slider.radius, 0, Math.PI * 2);
-//         ctx.fillStyle = 'grey';
-//         ctx.fill();
-//     }
-
-//     function updateSlider(mouseX, mouseY) {
-//         if (!isDragging) return;
-
-//         let minDist = Infinity;
-//         points.forEach((point, index) => {
-//             if (index > 0) {
-//                 let tClosest = findClosestPointOnLine(points[index - 1], point, mouseX, mouseY);
-//                 let x = points[index - 1].x + tClosest * (point.x - points[index - 1].x);
-//                 let y = points[index - 1].y + tClosest * (point.y - points[index - 1].y);
-//                 let dist = Math.sqrt((x - mouseX) ** 2 + (y - mouseY) ** 2);
-//                 if (dist < minDist) {
-//                     minDist = dist;
-//                     slider.x = x;
-//                     slider.y = y;
-//                 }
-//             }
-//         });
-//         drawPath();
-//         drawSlider();
-//     }
-
-//     function findClosestPointOnLine(p1, p2, px, py) {
-//         let t = ((px - p1.x) * (p2.x - p1.x) + (py - p1.y) * (p2.y - p1.y)) / (Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-//         return Math.max(0, Math.min(1, t));
-//     }
-
-//     canvas.addEventListener('mousedown', function (event) {
-//         const rect = canvas.getBoundingClientRect();
-//         const mouseX = event.clientX - rect.left;
-//         const mouseY = event.clientY - rect.top;
-//         if (Math.sqrt((mouseX - slider.x) ** 2 + (mouseY - slider.y) ** 2) <= slider.radius) {
-//             isDragging = true;
-//         }
-//     });
-
-//     canvas.addEventListener('mousemove', function (event) {
-//         if (isDragging) {
-//             const rect = canvas.getBoundingClientRect();
-//             const mouseX = event.clientX - rect.left;
-//             const mouseY = event.clientY - rect.top;
-//             updateSlider(mouseX, mouseY);
-//         }
-//     });
-
-//     canvas.addEventListener('mouseup', function () {
-//         isDragging = false;
-//     });
-
-//     canvas.addEventListener('mouseout', function () {
-//         isDragging = false;
-//     });
-
-//     drawPath();
-//     drawSlider();
-// });
-
-
-
-
-
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const sliderCanvas = document.getElementById('sliderCanvas');
@@ -149,16 +50,6 @@ function findClosestPointOnBezier(mouseX, mouseY, P0, P1, P2, P3) {
     return { closestPoint, closestT, minDist };
 }
 
-
-
-
-
-
-
-
-
-
-
 function drawClosestPoint(ctx, point) {
     ctx.beginPath();
     ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
@@ -176,6 +67,29 @@ BaLetterPoints = [
 ];
 let currentLine = BaLetterPoints[1];
 sliderCanvas.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    point = findClosestPointOnBezier(mouseX, mouseY, {x:currentLine.sx, y:currentLine.sy}, {x:currentLine.cx1, y:currentLine.cy1}, {x:currentLine.cx2, y:currentLine.cy2}, {x:currentLine.ex, y:currentLine.ey});
+    const distance = calculateDistance(currentSliderPosition.x, currentSliderPosition.y, mouseX, mouseY);
+    if (drawing && distance <=20 && point.closestT > oldClosestT) {
+        if (point.minDist <= 20) {
+            oldClosestT = point.closestT;
+            // drawClosestPoint(ctx, point.closestPoint);
+            drawPartialBezier(ctx, {x:currentLine.sx, y:currentLine.sy}, {x:currentLine.cx1, y:currentLine.cy1}, {x:currentLine.cx2, y:currentLine.cy2}, {x:currentLine.ex, y:currentLine.ey}, oldClosestT, 'red');
+            clearSliderCavnas();
+            drawSlider(point.closestPoint.x, point.closestPoint.y, "lightblue", 20);
+            drawSlider(point.closestPoint.x, point.closestPoint.y, "white", 10);
+            if (oldClosestT === 1) {
+                currentLine = BaLetterPoints[2];
+                oldClosestT = -1;
+            }
+        } else {
+            drawing = false;
+        }
+    }
+});
+sliderCanvas.addEventListener('touchmove', (event) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
@@ -241,17 +155,29 @@ function calculateDistance(x1, y1, x2, y2) {
 function clearSliderCavnas() {
     sctx.clearRect(0, 0, sliderCanvas.width, sliderCanvas.height);
 }
+
 sliderCanvas.addEventListener('mousedown', function(event) {
     if (event.button === 0) {
         drawing = true;
     }
 });
+sliderCanvas.addEventListener('touchstart', function(event) {
+        drawing = true;
+});
+
+
 sliderCanvas.addEventListener('mouseup', function(event) {
     if (event.button === 0) {
         drawing = false;
     }
 });
+sliderCanvas.addEventListener('touchend', function(event) {
+        drawing = false;
+});
 sliderCanvas.addEventListener('mouseout', function(event) {
+    drawing = false;
+});
+sliderCanvas.addEventListener('touchcancel', function(event) {
     drawing = false;
 });
 
@@ -263,3 +189,16 @@ drawSlider(415, 182, "white", 10);
 ctx.fillRect(415, 182, 10, 10);
 ctx.fillRect(385, 276, 10, 10);
 ctx.fillRect(199, 181, 10, 10);
+
+
+
+// Adding event listeners for mouse and touch
+sliderCanvas.addEventListener('mousedown', handleDown);
+sliderCanvas.addEventListener('mousemove', handleMove);
+sliderCanvas.addEventListener('mouseup', handleUp);
+sliderCanvas.addEventListener('mouseout', handleUp);
+
+sliderCanvas.addEventListener('touchstart', handleDown);
+sliderCanvas.addEventListener('touchmove', handleMove);
+sliderCanvas.addEventListener('touchend', handleUp);
+sliderCanvas.addEventListener('touchcancel', handleUp);
